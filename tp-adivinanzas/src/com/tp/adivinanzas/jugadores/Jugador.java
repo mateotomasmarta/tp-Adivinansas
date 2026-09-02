@@ -30,6 +30,14 @@ public abstract class Jugador {
         return filtro.cumple(personajeSecreto);
     }
 
+    /**
+     * Comprueba un intento sin entregar el personaje secreto al rival.
+     */
+    public boolean responderAdivinanza(Personaje personaje) {
+        Objects.requireNonNull(personaje, "El personaje es obligatorio.");
+        return personajeSecreto.equals(personaje);
+    }
+
     public abstract Filtro elegirPregunta();
 
     public abstract Personaje arriesgarPersonaje();
