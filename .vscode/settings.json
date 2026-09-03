@@ -1,0 +1,9 @@
+{
+    "java.project.sourcePaths": [
+        "tp-adivinanzas/src"
+    ],
+    "java.project.outputPath": "tp-adivinanzas/bin",
+    "java.project.referencedLibraries": [
+        "tp-adivinanzas/lib/**/*.jar"
+    ]
+}

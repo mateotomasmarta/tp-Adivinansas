@@ -7,40 +7,70 @@ import com.tp.adivinanzas.modelo.Personaje;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+
+import net.datafaker.Faker;
 
 public final class FabricaPersonajes {
     private static final int CANTIDAD_PERSONAJES = 23;
 
+    private final Faker faker;
+
+    public FabricaPersonajes() {
+        this.faker = new Faker(Locale.forLanguageTag("es-AR"));
+    }
+
     public List<Personaje> crearPersonajes() {
         List<Personaje> personajes = new ArrayList<Personaje>();
+        Set<String> nombresUsados = new HashSet<String>();
 
-        personajes.add(crear("Pedro", Genero.MASCULINO, false, true, ColorPelo.NEGRO, true));
-        personajes.add(crear("Ana", Genero.FEMENINO, false, false, ColorPelo.AMARILLO, false));
-        personajes.add(crear("Luis", Genero.MASCULINO, true, false, ColorPelo.NINGUNO, false));
-        personajes.add(crear("Maria", Genero.FEMENINO, false, true, ColorPelo.COLORADO, false));
-        personajes.add(crear("Carlos", Genero.MASCULINO, false, false, ColorPelo.AMARILLO, true));
-        personajes.add(crear("Sofia", Genero.FEMENINO, true, true, ColorPelo.NINGUNO, false));
-        personajes.add(crear("Jorge", Genero.MASCULINO, false, true, ColorPelo.COLORADO, false));
-        personajes.add(crear("Lucia", Genero.FEMENINO, false, false, ColorPelo.NEGRO, false));
-        personajes.add(crear("Diego", Genero.MASCULINO, true, true, ColorPelo.NINGUNO, true));
-        personajes.add(crear("Valeria", Genero.FEMENINO, false, true, ColorPelo.AMARILLO, true));
-        personajes.add(crear("Martin", Genero.MASCULINO, false, false, ColorPelo.NEGRO, false));
-        personajes.add(crear("Clara", Genero.FEMENINO, true, false, ColorPelo.NINGUNO, true));
-        personajes.add(crear("Tomas", Genero.MASCULINO, false, false, ColorPelo.COLORADO, true));
-        personajes.add(crear("Elena", Genero.FEMENINO, false, true, ColorPelo.NEGRO, true));
-        personajes.add(crear("Ricardo", Genero.MASCULINO, true, true, ColorPelo.NINGUNO, false));
-        personajes.add(crear("Paula", Genero.FEMENINO, false, false, ColorPelo.COLORADO, true));
-        personajes.add(crear("Federico", Genero.MASCULINO, false, true, ColorPelo.AMARILLO, false));
-        personajes.add(crear("Camila", Genero.FEMENINO, true, true, ColorPelo.NINGUNO, true));
-        personajes.add(crear("Nicolas", Genero.MASCULINO, false, false, ColorPelo.NEGRO, true));
-        personajes.add(crear("Rocio", Genero.FEMENINO, false, true, ColorPelo.AMARILLO, false));
-        personajes.add(crear("Hector", Genero.MASCULINO, true, false, ColorPelo.NINGUNO, true));
-        personajes.add(crear("Marta", Genero.FEMENINO, true, false, ColorPelo.NINGUNO, false));
-        personajes.add(crear("Bruno", Genero.MASCULINO, false, true, ColorPelo.NEGRO, false));
+        for (Genero genero : Genero.values()) {
+            for (boolean calvo : new boolean[] {false, true}) {
+                for (boolean lentes : new boolean[] {false, true}) {
+                    for (ColorPelo colorPelo : coloresValidos(calvo)) {
+                        for (boolean barba : new boolean[] {false, true}) {
+                            if (personajes.size() == CANTIDAD_PERSONAJES) {
+                                validarPersonajes(personajes);
+                                return personajes;
+                            }
+
+                            personajes.add(crear(
+                                    generarNombre(genero, nombresUsados),
+                                    genero,
+                                    calvo,
+                                    lentes,
+                                    colorPelo,
+                                    barba));
+                        }
+                    }
+                }
+            }
+        }
 
         validarPersonajes(personajes);
         return personajes;
+    }
+
+    private ColorPelo[] coloresValidos(boolean calvo) {
+        if (calvo) {
+            return new ColorPelo[] {ColorPelo.NINGUNO};
+        }
+
+        return new ColorPelo[] {ColorPelo.COLORADO, ColorPelo.NEGRO, ColorPelo.AMARILLO};
+    }
+
+    private String generarNombre(Genero genero, Set<String> nombresUsados) {
+        String nombre;
+        do {
+            if (genero == Genero.MASCULINO) {
+                nombre = faker.name().maleFirstName();
+            } else {
+                nombre = faker.name().femaleFirstName();
+            }
+        } while (!nombresUsados.add(nombre));
+
+        return nombre;
     }
 
     private Personaje crear(String nombre, Genero genero, boolean calvo, boolean lentes, ColorPelo colorPelo, boolean barba) {
