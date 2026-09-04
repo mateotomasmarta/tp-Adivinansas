@@ -56,6 +56,24 @@ public final class JugadorMaquina extends Jugador {
         this.candidatos = restantes;
     }
 
+    /**
+     * Incorpora una pregunta propia u observada: reduce los candidatos y la
+     * marca como conocida para no volver a elegirla.
+     */
+    public void incorporarConocimiento(Filtro filtro, boolean respuesta) {
+        actualizarCandidatos(filtro, respuesta);
+        if (!filtrosUsados.contains(filtro)) {
+            filtrosUsados.add(filtro);
+        }
+    }
+
+    /**
+     * Quita del conjunto de candidatos una adivinanza que resulto incorrecta.
+     */
+    public void descartarCandidato(Personaje personaje) {
+        candidatos.remove(personaje);
+    }
+
     @Override
     public Personaje arriesgarPersonaje() {
         if (candidatos.isEmpty()) {

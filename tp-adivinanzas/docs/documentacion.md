@@ -82,3 +82,26 @@ Ninguna de las dos subclases hace su trabajo sola: ambas delegan la decision en 
 - `JugadorHumano` delega en `InterfazHumano` (misma idea que `Estrategia`, pero para resolver la interaccion con una persona en vez de un algoritmo). `JugadorHumano` no hace `System.out`/`Scanner` por si mismo: le pide a la `InterfazHumano` que elija un filtro o un personaje, pasandole las opciones disponibles. Quien implementa `InterfazHumano` con la consola real es `ConsolaJuego` (B8, Persona 5); asi ninguna de las dos clases de `Jugador` sabe nada sobre como se muestra la informacion en pantalla.
 
 `Estrategia` e `InterfazHumano` las definimos en el bloque de jugadores en lugar de en los bloques que las implementan, porque son `JugadorMaquina` y `JugadorHumano` -los modulos de alto nivel- quienes fijan la abstraccion que necesitan (Dependency Inversion): no dependen de las implementaciones concretas, solo de estos contratos.
+
+## B5 - Observer entre Maquina 1 y Maquina 2
+
+El problema de este bloque es permitir que Maquina 2 conozca las preguntas de Maquina 1 sin que Maquina 1 tenga que comunicarse directamente con ella. Para resolverlo se utiliza Observer.
+
+`HistorialPreguntas` publica los resultados y mantiene todas las preguntas en orden. Cada `ResultadoPregunta` contiene la pregunta, el filtro utilizado y la respuesta afirmativa o negativa. El personaje secreto nunca se incluye en la informacion compartida.
+
+`ObservadorMaquina` es el observador concreto de Maquina 2. Antes de notificar, el historial consulta si la pregunta fue realizada por Maquina 1 y si esta dirigida al rival que ambas maquinas intentan adivinar. Por eso una pregunta del humano o de la propia Maquina 2 no genera una notificacion para M2.
+
+Cuando recibe una pregunta valida, Maquina 2 actualiza sus candidatos y guarda el filtro entre las preguntas conocidas. Como `elegirPregunta()` excluye esos filtros, no puede repetir una pregunta que ya aprendio mediante Observer. El historial y los observadores se almacenan en listas; antes de agregar un observador se comprueba que no este repetido.
+
+## B6 - Motor de partida
+
+`Partida` coordina un encuentro entre dos jugadores, que puede ser Humano vs Maquina o Maquina vs Maquina. Guarda los participantes, el jugador que tiene el turno, la cantidad de turnos, el estado y el ganador.
+
+La API representa directamente las dos acciones de la consigna:
+
+- `realizarPregunta(Filtro)`: consulta `responder()` en el rival, actualiza los candidatos de la maquina que pregunto, registra el resultado y cambia el turno.
+- `realizarAdivinanza(Personaje)`: consulta `responderAdivinanza()` en el rival. Si falla, la maquina descarta ese candidato y cambia el turno. Si acierta, la partida termina y guarda al ganador.
+
+`EstadoPartida` distingue entre `EN_CURSO` y `FINALIZADA`. Una vez finalizada, no se permiten nuevas preguntas ni adivinanzas. No existe un limite de preguntas impuesto por el motor.
+
+El motor no elige estrategias, no crea filtros ni personajes, no ordena datos, no imprime por consola y no persiste records. Su unica responsabilidad es coordinar el flujo de la partida. Las decisiones quedan a cargo de los jugadores y sus estrategias; la consola y el simulador utilizan los metodos publicos del motor.
