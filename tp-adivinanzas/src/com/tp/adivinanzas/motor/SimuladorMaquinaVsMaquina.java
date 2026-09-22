@@ -9,12 +9,9 @@ public class SimuladorMaquinavsMaquina {
     public void simular(JugadorMaquina m1, JugadorMaquina m2) {
         Partida partida = new Partida(m1, m2);
 
-        System.out.println("\n==========================================");
-        System.out.println("   SIMULACIÓN MÁQUINA VS MÁQUINA");
-        System.out.println("==========================================");
+        System.out.println("SIMULACIÓN MÁQUINA VS MÁQUINA");
         System.out.println("Máquina 1: " + m1.getNombre());
         System.out.println("Máquina 2: " + m2.getNombre());
-        System.out.println("==========================================\n");
 
         simularTurnoRecursivo(partida, 1);
     }
@@ -23,23 +20,21 @@ public class SimuladorMaquinavsMaquina {
     private void simularTurnoRecursivo(Partida partida, int numeroTurno) {
         // CASO BASE: La partida finalizó (alguien adivinó correctamente)
         if (partida.getEstado() == EstadoPartida.FINALIZADA) {
-            System.out.println("\n==========================================");
             System.out.println("GANADOR: " + partida.getGanador().getNombre());
             System.out.println("Total de turnos jugados: " + partida.getTurnosJugados());
-            System.out.println("==========================================");
             return;
         }
 
         JugadorMaquina atacante = (JugadorMaquina) partida.getJugadorActual();
         JugadorMaquina defensor = (JugadorMaquina) partida.getRivalActual();
 
-        System.out.println("--- TURNO " + numeroTurno + " [" + atacante.getNombre() + "] ---");
+        System.out.println("TURNO " + numeroTurno + " " + atacante.getNombre());
         System.out.println("Candidatos restantes: " + atacante.getCandidatosRestantes().size());
 
         // Regla de decisión: Si le queda 1 solo candidato, arriesga la adivinanza
         if (atacante.getCandidatosRestantes().size() == 1) {
             Personaje candidato = atacante.getCandidatosRestantes().get(0);
-            System.out.println(atacante.getNombre() + " arriesga: '¿Tu personaje es " + candidato.getNombre() + "?'");
+            System.out.println(atacante.getNombre() + " arriesga: Tu personaje es " + candidato.getNombre() + "?");
 
             boolean acierto = partida.realizarAdivinanza(candidato);
 
@@ -65,12 +60,18 @@ public class SimuladorMaquinavsMaquina {
             } else {
                 System.out.println("Pregunta: " + filtro.getDescripcion());
 
-                // 'Partida' evalúa la pregunta, actualiza el conocimiento del atacante y cambia el turno
+                int candidatosAntes = atacante.getCandidatosRestantes().size();
+
+                //Partida evalúa la pregunta, actualiza el conocimiento del atacante y cambia el turno
                 ResultadoPregunta resultado = partida.realizarPregunta(filtro);
+
+                int candidatosDespues = atacante.getCandidatosRestantes().size();
+                int descartados = candidatosAntes - candidatosDespues;
 
                 System.out.println("Respuesta de " + defensor.getNombre() + ": " 
                         + (resultado.isRespuestaAfirmativa() ? "SÍ" : "NO"));
-                System.out.println("Candidatos ajustados a: " + atacante.getCandidatosRestantes().size());
+                System.out.println("Se descartaron: " + descartados + " candidatos"); 
+                System.out.println("Candidatos restantes de " + atacante.getNombre() + ": " + candidatosDespues);
             }
         }
         // PASO RECURSIVO: Avanza al siguiente turno
