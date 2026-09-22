@@ -22,4 +22,22 @@ public interface Estrategia {
      * actual de candidatos.
      */
     Personaje elegirPersonaje(List<Personaje> candidatos);
+
+    /**
+     * Decide si en este turno conviene arriesgar un personaje o seguir
+     * preguntando. Es el segundo eje donde las dos maquinas se diferencian:
+     * no solo eligen distinto QUE preguntar, sino tambien CUANDO dejar de
+     * preguntar. Default conservador para no romper implementaciones previas.
+     */
+    default boolean debeArriesgar(List<Personaje> candidatos) {
+        return candidatos != null && candidatos.size() <= 1;
+    }
+
+    /**
+     * Nombre legible de la estrategia, para la traza del modo maquina vs
+     * maquina y para los reportes de simulacion.
+     */
+    default String getNombre() {
+        return getClass().getSimpleName();
+    }
 }

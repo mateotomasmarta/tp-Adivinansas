@@ -1,20 +1,27 @@
-package persistencia;
+package com.tp.adivinanzas.persistencia;
 
-public class RecordJugador{
-    private String nombre;
-    private int partidasGanadas;
+/**
+ * Registro inmutable de un jugador en el marcador: nombre y partidas ganadas.
+ */
+public class RecordJugador {
+    private final String nombre;
+    private final int partidasGanadas;
 
-    public RecordJugador(String nombre, int partidasGanadas){
+    public RecordJugador(String nombre, int partidasGanadas) {
         this.nombre = nombre;
         this.partidasGanadas = partidasGanadas;
     }
 
-    public String getNombre(){
+    public String getNombre() {
         return nombre;
     }
 
-    public int getPartidasGanadas(){
+    public int getPartidasGanadas() {
         return partidasGanadas;
     }
-}
 
+    @Override
+    public String toString() {
+        return nombre + ": " + partidasGanadas + " victorias";
+    }
+}

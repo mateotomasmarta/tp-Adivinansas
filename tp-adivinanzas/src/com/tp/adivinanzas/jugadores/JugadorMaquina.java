@@ -85,4 +85,12 @@ public final class JugadorMaquina extends Jugador {
     public List<Personaje> getCandidatos() {
         return Collections.unmodifiableList(candidatos);
     }
+
+    /**
+     * Preguntas ya realizadas o ya conocidas por observacion. Solo lectura:
+     * el simulador la usa para mostrar que filtros siguen disponibles.
+     */
+    public List<Filtro> getFiltrosUsados() {
+        return Collections.unmodifiableList(filtrosUsados);
+    }
 }
