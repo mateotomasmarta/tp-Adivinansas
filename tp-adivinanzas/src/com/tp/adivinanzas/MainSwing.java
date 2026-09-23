@@ -91,7 +91,7 @@ public class MainSwing {
     }
 
     private static void jugarHumanoVsMaquinas(String nombreJugador, VentanaJuego ventana, InterfazSwing interfaz,
-                                              List<Personaje> personajes, RecordDAO recordDAO) {
+            List<Personaje> personajes, RecordDAO recordDAO) {
         ventana.log("\nElegi tu personaje secreto. No lo vas a poder cambiar durante la partida.");
         Personaje secretoHumano = interfaz.elegirPersonaje(nombreJugador, personajes);
         ventana.log("Elegiste: " + secretoHumano.getNombre());
@@ -130,22 +130,65 @@ public class MainSwing {
 
         ventana.log("\nGano: " + partida.getGanador().getNombre()
                 + " en " + partida.getTurnosJugados() + " turnos.");
+
         ventana.log("Candidatos que le quedaban a Maquina 2 escuchando: "
                 + maquina2.getCandidatos().size());
 
-        if (partida.getGanador() == humano) {
-            recordDAO.registrarVictoria(nombreJugador);
-            ventana.log("Victoria registrada en el marcador.");
-        } else {
+        if (partida.getGanador() != humano) {
             ventana.log("El personaje de Maquina 1 era: "
                     + maquina1.getPersonajeSecreto().getNombre());
+
+            ventana.esperarContinuar("Volver al menu");
+            return;
+        }
+
+        ventana.log("\nVenciste a Maquina 1.");
+        ventana.log("Ahora te enfrentas a Maquina 2.");
+        ventana.log("Maquina 2 conserva la informacion aprendida de Maquina 1.");
+
+        Partida partida2 = new Partida(humano, maquina2);
+
+        List<Personaje> candidatosHumanoM2 = new ArrayList<Personaje>(personajes);
+
+        ventana.log("\nEmpieza la segunda partida.");
+        ventana.log("Tu objetivo: adivinar el personaje de Maquina 2.");
+
+        while (partida2.getEstado() == EstadoPartida.EN_CURSO) {
+            Jugador actual = partida2.getJugadorActual();
+
+            if (actual == humano) {
+                turnoHumano(
+                        partida2,
+                        humano,
+                        ventana,
+                        interfaz,
+                        candidatosHumanoM2);
+            } else {
+                turnoMaquina(
+                        partida2,
+                        maquina2,
+                        estrategiaM2,
+                        ventana);
+            }
+        }
+
+        ventana.log("\nGano: " + partida2.getGanador().getNombre()
+                + " en " + partida2.getTurnosJugados() + " turnos.");
+
+        if (partida2.getGanador() == humano) {
+            recordDAO.registrarVictoria(nombreJugador);
+            ventana.log("Venciste a las dos maquinas.");
+            ventana.log("Victoria registrada en el marcador.");
+        } else {
+            ventana.log("El personaje de Maquina 2 era: "
+                    + maquina2.getPersonajeSecreto().getNombre());
         }
 
         ventana.esperarContinuar("Volver al menu");
     }
 
     private static void turnoHumano(Partida partida, JugadorHumano humano, VentanaJuego ventana,
-                                    InterfazSwing interfaz, List<Personaje> candidatosHumano) {
+            InterfazSwing interfaz, List<Personaje> candidatosHumano) {
         ventana.log("\n--- Tu turno ---");
         ventana.log("Te quedan " + candidatosHumano.size() + " personajes posibles para arriesgar.");
         String opcion = ventana.pedirEleccion(
@@ -172,7 +215,7 @@ public class MainSwing {
     }
 
     private static void turnoMaquina(Partida partida, JugadorMaquina maquina, Estrategia estrategia,
-                                     VentanaJuego ventana) {
+            VentanaJuego ventana) {
         ventana.log("\n--- Turno de " + maquina.getNombre() + " ---");
         ventana.log("Le quedan " + maquina.getCandidatos().size() + " candidatos posibles.");
 
@@ -201,8 +244,8 @@ public class MainSwing {
         ventana.log("\nPersonaje secreto de Maquina 1: " + secretos.get(0).getNombre());
         ventana.log("Personaje secreto de Maquina 2: " + secretos.get(1).getNombre());
 
-        String salida = capturarSalida(() ->
-                new SimuladorMaquinaVsMaquina(estrategiaM1, estrategiaM2).simular(maquina1, maquina2));
+        String salida = capturarSalida(
+                () -> new SimuladorMaquinaVsMaquina(estrategiaM1, estrategiaM2).simular(maquina1, maquina2));
         ventana.log(salida);
 
         ventana.esperarContinuar("Volver al menu");
