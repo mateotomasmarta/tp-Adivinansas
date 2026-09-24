@@ -22,7 +22,9 @@ Se agrego `barba` como quinto atributo porque el espacio original no alcanza par
 
 Como se necesitan 23 personajes, con solo genero, calvicie, lentes y color de pelo es matematicamente imposible evitar repetidos. Si dos personajes tienen la misma combinacion de atributos, una maquina que filtra candidatos no puede distinguirlos y la partida puede quedar irresoluble. Con `barba` el espacio sube a 32 combinaciones, suficiente para los 23 personajes.
 
-`FabricaPersonajes` crea los 23 personajes hardcodeados y valida dos condiciones:
+`FabricaPersonajes` crea automaticamente los 23 personajes recorriendo combinaciones posibles de atributos. Usa Datafaker solo para generar nombres, no para decidir las caracteristicas del personaje. Los personajes salen con `id = 0` y el `RepositorioPersonajes` les asigna el ID definitivo despues de ordenarlos.
+
+La fabrica valida dos condiciones:
 
 - Que existan exactamente 23 personajes.
 - Que no haya dos personajes con la misma combinacion de `genero + calvo + lentes + colorPelo + barba`.
@@ -33,7 +35,7 @@ Como se necesitan 23 personajes, con solo genero, calvicie, lentes y color de pe
 
 Flujo de carga:
 
-1. Pide los personajes a `FabricaPersonajes`.
+1. Pide los personajes generados a `FabricaPersonajes`.
 2. Los ordena por genero usando `OrdenadorMergeSort`.
 3. Asigna los IDs del 1 al 23 segun la posicion final.
 
