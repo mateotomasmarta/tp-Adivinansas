@@ -5,10 +5,21 @@ import com.tp.adivinanzas.modelo.Personaje;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Busqueda binaria de personajes por id.
+ *
+ * Solo funciona correctamente si la lista recibida esta ordenada por id de
+ * menor a mayor.
+ */
 public final class BuscadorBinario {
     private BuscadorBinario() {
     }
 
+    /**
+     * Busca el personaje partiendo el rango a la mitad en cada iteracion.
+     *
+     * Costo: O(log n), porque en cada paso descarta la mitad del rango.
+     */
     public static Optional<Personaje> buscarPorId(List<Personaje> personajes, int idBuscado) {
         int inicio = 0;
         int fin = personajes.size() - 1;
