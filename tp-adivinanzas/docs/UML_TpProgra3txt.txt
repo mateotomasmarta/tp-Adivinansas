@@ -1,0 +1,556 @@
+@startuml
+title UML completo detallado - TP Adivinanzas
+
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+
+package "com.tp.adivinanzas" {
+  class Main {
+    -{static} RANDOM: Random
+    +{static} main(args: String[]): void
+    -{static} turnoMaquina(partida: Partida, maquina: JugadorMaquina, estrategia: Estrategia): void
+    -{static} simularMaquinaVsMaquina(personajes: List): void
+    -{static} mostrarRecords(recordDAO: RecordDAO): void
+    -{static} elegirDistintos(personajes: List, cantidad: int, excluido: Personaje): List
+  }
+
+  class MainSwing {
+    -{static} RANDOM: Random
+    +{static} main(args: String[]): void
+    -{static} ejecutar(ventana: VentanaJuego): void
+    -{static} simularMaquinaVsMaquina(ventana: VentanaJuego, personajes: List): void
+    -{static} mostrarRecords(ventana: VentanaJuego, recordDAO: RecordDAO): void
+    -{static} capturarSalida(accion: Runnable): String
+    -{static} elegirDistintos(personajes: List, cantidad: int, excluido: Personaje): List
+  }
+
+  class ConsolaJuego {
+    -scanner: Scanner
+    +ConsolaJuego(scanner: Scanner)
+    +elegirFiltro(nombreJugador: String, disponibles: List): Filtro
+    +elegirPersonaje(nombreJugador: String, disponibles: List): Personaje
+    +mostrarResultadoTurno(resultado: ResultadoPregunta): void
+    +pedirEntero(min: int, max: int): int
+  }
+
+  class InterfazSwing {
+    -ventana: VentanaJuego
+    +InterfazSwing(ventana: VentanaJuego)
+    +elegirFiltro(nombreJugador: String, disponibles: List): Filtro
+    +elegirPersonaje(nombreJugador: String, disponibles: List): Personaje
+    +elegirPersonajeOVolver(nombreJugador: String, disponibles: List): Personaje
+    -describir(personaje: Personaje): String
+  }
+
+  class VentanaJuego {
+    -bitacora: JTextArea
+    -panelAccion: JPanel
+    -{static} VOLVER: Object
+    +VentanaJuego()
+    +log(texto: String): void
+    +limpiarAccion(): void
+    +pedirTexto(etiqueta: String, valorPorDefecto: String): String
+    +pedirEleccion(opciones: List, etiqueta: Function): Object
+    +pedirEleccion(opciones: List, etiqueta: Function, botonVolver: String): Object
+    +esperarContinuar(etiquetaBoton: String): void
+    -pedirEnPantalla(constructor: Function): Object
+  }
+}
+
+package "modelo" {
+  class Personaje {
+    -id: int
+    -nombre: String
+    -genero: Genero
+    -calvo: boolean
+    -lentes: boolean
+    -colorPelo: ColorPelo
+    -barba: boolean
+    +Personaje(id: int, nombre: String, genero: Genero, calvo: boolean, lentes: boolean, colorPelo: ColorPelo, barba: boolean)
+    -validarCoherenciaPelo(): void
+    +conId(nuevoId: int): Personaje
+    +getId(): int
+    +getNombre(): String
+    +getGenero(): Genero
+    +isCalvo(): boolean
+    +tieneLentes(): boolean
+    +getColorPelo(): ColorPelo
+    +tieneBarba(): boolean
+    +equals(otro: Object): boolean
+    +hashCode(): int
+    +toString(): String
+  }
+
+  enum Genero {
+    MASCULINO
+    FEMENINO
+  }
+
+  enum ColorPelo {
+    COLORADO
+    NEGRO
+    AMARILLO
+    NINGUNO
+  }
+}
+
+package "filtros" {
+  interface Filtro {
+    +cumple(personaje: Personaje): boolean
+    +getDescripcion(): String
+    +y(otro: Filtro): Filtro
+    +o(otro: Filtro): Filtro
+    +negar(): Filtro
+  }
+
+  class FiltroBarba {
+    -barba: boolean
+    +FiltroBarba(barba: boolean)
+    +cumple(personaje: Personaje): boolean
+    +getDescripcion(): String
+  }
+
+  class FiltroCalvicie {
+    -calvo: boolean
+    +FiltroCalvicie(calvo: boolean)
+    +cumple(personaje: Personaje): boolean
+    +getDescripcion(): String
+  }
+
+  class FiltroColorPelo {
+    -colorPelo: ColorPelo
+    +FiltroColorPelo(colorPelo: ColorPelo)
+    +cumple(personaje: Personaje): boolean
+    +getDescripcion(): String
+  }
+
+  class FiltroGenero {
+    -genero: Genero
+    +FiltroGenero(genero: Genero)
+    +cumple(personaje: Personaje): boolean
+    +getDescripcion(): String
+  }
+
+  class FiltroLentes {
+    -lentes: boolean
+    +FiltroLentes(lentes: boolean)
+    +cumple(personaje: Personaje): boolean
+    +getDescripcion(): String
+  }
+
+  class CatalogoFiltros {
+    -{static} FILTROS: List
+    -CatalogoFiltros()
+    +{static} listarTodos(): List
+    -{static} crearFiltros(): List
+  }
+}
+
+package "jugadores" {
+  abstract class Jugador {
+    -nombre: String
+    -personajeSecreto: Personaje
+    #Jugador(nombre: String, personajeSecreto: Personaje)
+    +responder(filtro: Filtro): boolean
+    +responderAdivinanza(personaje: Personaje): boolean
+    +elegirPregunta(): Filtro
+    +arriesgarPersonaje(): Personaje
+    +getNombre(): String
+    +getPersonajeSecreto(): Personaje
+  }
+
+  class JugadorHumano {
+    -interfaz: InterfazHumano
+    +JugadorHumano(nombre: String, personajeSecreto: Personaje, interfaz: InterfazHumano)
+    +elegirPregunta(): Filtro
+    +arriesgarPersonaje(): Personaje
+  }
+
+  class JugadorMaquina {
+    -estrategia: Estrategia
+    -candidatos: List
+    -filtrosUsados: List
+    +JugadorMaquina(nombre: String, personajeSecreto: Personaje, estrategia: Estrategia, candidatosIniciales: List)
+    +elegirPregunta(): Filtro
+    +actualizarCandidatos(filtro: Filtro, respuesta: boolean): void
+    +incorporarConocimiento(filtro: Filtro, respuesta: boolean): void
+    +descartarCandidato(personaje: Personaje): void
+    +arriesgarPersonaje(): Personaje
+    +getCandidatos(): List
+    +getFiltrosUsados(): List
+  }
+
+  interface InterfazHumano {
+    +elegirFiltro(nombreJugador: String, disponibles: List): Filtro
+    +elegirPersonaje(nombreJugador: String, candidatos: List): Personaje
+  }
+}
+
+package "jugadores.estrategias" {
+  interface Estrategia {
+    +elegirFiltro(candidatos: List, filtrosDisponibles: List): Filtro
+    +elegirPersonaje(candidatos: List): Personaje
+    +debeArriesgar(candidatos: List): boolean
+    +getNombre(): String
+  }
+
+  class EstrategiaAsertiva {
+    +elegirFiltro(candidatos: List, filtrosDisponibles: List): Filtro
+    +debeArriesgar(candidatos: List): boolean
+    +elegirPersonaje(candidatos: List): Personaje
+    +getNombre(): String
+    +{static} contarAfirmativos(candidatos: List, filtro: Filtro): int
+    +{static} peorCasoDe(candidatos: List, filtro: Filtro): int
+    -validarEntrada(candidatos: List, filtrosDisponibles: List): void
+  }
+
+  class EstrategiaConservadora {
+    -{static} UMBRAL_ARRIESGAR_POR_DEFECTO: int
+    -umbralArriesgar: int
+    -random: Random
+    -guion: List
+    -etiquetaGuion: String
+    +EstrategiaConservadora()
+    +EstrategiaConservadora(umbralArriesgar: int, random: Random)
+    +EstrategiaConservadora(umbralArriesgar: int, random: Random, guion: List, etiquetaGuion: String)
+    +elegirFiltro(candidatos: List, filtrosDisponibles: List): Filtro
+    +debeArriesgar(candidatos: List): boolean
+    +elegirPersonaje(candidatos: List): Personaje
+    +getNombre(): String
+  }
+
+  class BancoDeSimulaciones {
+    -{static} LIMITE_TURNOS: int
+    -BancoDeSimulaciones()
+    +{static} medir(estrategia: Estrategia, repeticiones: int): Reporte
+    -{static} simularBusqueda(estrategia: Estrategia, universo: List, secreto: Personaje): int[]
+    +{static} main(args: String[]): void
+  }
+
+  class Reporte {
+    -estrategia: String
+    -partidas: int
+    -turnosTotales: int
+    -turnosMinimos: int
+    -turnosMaximos: int
+    -adivinanzasFallidas: int
+    +getPromedioTurnos(): double
+    +getTurnosMinimos(): int
+    +getTurnosMaximos(): int
+    +getAdivinanzasFallidas(): int
+    +toString(): String
+  }
+}
+
+package "motor" {
+  enum EstadoPartida {
+    EN_CURSO
+    FINALIZADA
+  }
+
+  class Partida {
+    -jugadores: Jugador[]
+    -historialPreguntas: HistorialPreguntas
+    -indiceTurno: int
+    -turnosJugados: int
+    -estado: EstadoPartida
+    -ganador: Jugador
+    +Partida(primerJugador: Jugador, segundoJugador: Jugador)
+    +Partida(primerJugador: Jugador, segundoJugador: Jugador, historialPreguntas: HistorialPreguntas)
+    +realizarPregunta(filtro: Filtro): ResultadoPregunta
+    +realizarAdivinanza(candidato: Personaje): boolean
+    -completarTurnoSinVictoria(): void
+    -cambiarTurno(): void
+    -verificarEnCurso(): void
+    +getJugadorActual(): Jugador
+    +getRivalActual(): Jugador
+    +getTurnosJugados(): int
+    +getEstado(): EstadoPartida
+    +getGanador(): Jugador
+    +getHistorialPreguntas(): HistorialPreguntas
+  }
+
+  class Pregunta {
+    -numeroTurno: int
+    -autor: String
+    -destinatario: String
+    -filtro: Filtro
+    +Pregunta(numeroTurno: int, autor: String, destinatario: String, filtro: Filtro)
+    -{static} validarNombre(nombre: String, mensaje: String): String
+    +getNumeroTurno(): int
+    +getAutor(): String
+    +getDestinatario(): String
+    +getFiltro(): Filtro
+    +getDescripcion(): String
+  }
+
+  class ResultadoPregunta {
+    -pregunta: Pregunta
+    -respuesta: boolean
+    +ResultadoPregunta(pregunta: Pregunta, respuesta: boolean)
+    +getPregunta(): Pregunta
+    +isRespuestaAfirmativa(): boolean
+  }
+
+  class HistorialPreguntas {
+    -resultados: List
+    -observadores: List
+    +agregarObservador(observador: ObservadorPreguntas): void
+    +quitarObservador(observador: ObservadorPreguntas): void
+    +registrar(resultado: ResultadoPregunta): void
+    +listarResultados(): List
+    +cantidad(): int
+  }
+
+  interface ObservadorPreguntas {
+    +debeObservar(pregunta: Pregunta): boolean
+    +alResponderPregunta(resultado: ResultadoPregunta): void
+  }
+
+  class ObservadorMaquina {
+    -maquina: JugadorMaquina
+    -autorObservado: String
+    -destinatarioCompartido: String
+    +ObservadorMaquina(maquina: JugadorMaquina, autorObservado: String, destinatarioCompartido: String)
+    +debeObservar(pregunta: Pregunta): boolean
+    +alResponderPregunta(resultado: ResultadoPregunta): void
+    -{static} validarNombre(nombre: String, mensaje: String): String
+  }
+
+  class SimuladorMaquinaVsMaquina {
+    -{static} LIMITE_TURNOS: int
+    -{static} LINEA: String
+    -estrategiaMaquina1: Estrategia
+    -estrategiaMaquina2: Estrategia
+    +SimuladorMaquinaVsMaquina(estrategiaMaquina1: Estrategia, estrategiaMaquina2: Estrategia)
+    +simular(maquina1: JugadorMaquina, maquina2: JugadorMaquina): void
+    -mostrarEvaluacion(candidatos: List, disponibles: List, evaluaCortes: boolean): void
+    -mejorPeorCaso(candidatos: List, disponibles: List): int
+    -filtrosDisponiblesPara(maquina: JugadorMaquina): List
+    -resumir(candidatos: List): String
+  }
+}
+
+package "persistencia" {
+  interface RecordDAO {
+    +cargar(): void
+    +guardar(): void
+    +mostrar(): void
+    +registrarVictoria(nombre: String): void
+    +listarOrdenado(): List
+  }
+
+  class RecordArchivoDAO {
+    -{static} RUTA_ARCHIVO: String
+    -{static} SEPARADOR: String
+    -records: Map
+    -archivo: File
+    +RecordArchivoDAO()
+    +RecordArchivoDAO(ruta: String)
+    +cargar(): void
+    +guardar(): void
+    +mostrar(): void
+    +registrarVictoria(nombre: String): void
+    +listarOrdenado(): List
+    -cerrar(lector: BufferedReader): void
+  }
+
+  class RecordJugador {
+    -nombre: String
+    -partidasGanadas: int
+    +RecordJugador(nombre: String, partidasGanadas: int)
+    +getNombre(): String
+    +getPartidasGanadas(): int
+    +toString(): String
+  }
+}
+
+package "repositorio" {
+  class RepositorioPersonajes {
+    -{static} INSTANCIA: RepositorioPersonajes
+    -personajes: List
+    -RepositorioPersonajes()
+    +{static} getInstancia(): RepositorioPersonajes
+    +listarTodos(): List
+    +buscarPorId(id: int): Optional
+    +filtrar(filtro: Predicate): List
+    +cantidad(): int
+  }
+
+  class FabricaPersonajes {
+    -{static} CANTIDAD_PERSONAJES: int
+    -faker: Faker
+    +FabricaPersonajes()
+    +crearPersonajes(): List
+    -coloresValidos(calvo: boolean): ColorPelo[]
+    -generarNombre(genero: Genero, nombresUsados: Set): String
+    -crear(nombre: String, genero: Genero, calvo: boolean, lentes: boolean, colorPelo: ColorPelo, barba: boolean): Personaje
+    -validarPersonajes(personajes: List): void
+  }
+
+  class BuscadorBinario {
+    -BuscadorBinario()
+    +{static} buscarPorId(personajes: List, idBuscado: int): Optional
+  }
+
+  class OrdenadorMergeSort {
+    -OrdenadorMergeSort()
+    +{static} ordenar(elementos: List, comparador: Comparator): List
+    -{static} mezclar(izquierda: List, derecha: List, comparador: Comparator): List
+  }
+}
+
+VentanaJuego --|> JFrame
+ConsolaJuego ..|> InterfazHumano
+InterfazSwing ..|> InterfazHumano
+
+JugadorHumano --|> Jugador
+JugadorMaquina --|> Jugador
+
+EstrategiaAsertiva ..|> Estrategia
+EstrategiaConservadora ..|> Estrategia
+
+FiltroBarba ..|> Filtro
+FiltroCalvicie ..|> Filtro
+FiltroColorPelo ..|> Filtro
+FiltroGenero ..|> Filtro
+FiltroLentes ..|> Filtro
+
+ObservadorMaquina ..|> ObservadorPreguntas
+RecordArchivoDAO ..|> RecordDAO
+
+Personaje --> Genero
+Personaje --> ColorPelo
+
+Main ..> RepositorioPersonajes
+Main ..> ConsolaJuego
+Main ..> JugadorHumano
+Main ..> JugadorMaquina
+Main ..> Estrategia
+Main ..> EstrategiaAsertiva
+Main ..> EstrategiaConservadora
+Main ..> Partida
+Main ..> EstadoPartida
+Main ..> HistorialPreguntas
+Main ..> ObservadorMaquina
+Main ..> ResultadoPregunta
+Main ..> SimuladorMaquinaVsMaquina
+Main ..> RecordDAO
+Main ..> RecordArchivoDAO
+
+MainSwing ..> VentanaJuego
+MainSwing ..> InterfazSwing
+MainSwing ..> RepositorioPersonajes
+MainSwing ..> JugadorHumano
+MainSwing ..> JugadorMaquina
+MainSwing ..> Estrategia
+MainSwing ..> EstrategiaAsertiva
+MainSwing ..> EstrategiaConservadora
+MainSwing ..> Partida
+MainSwing ..> EstadoPartida
+MainSwing ..> HistorialPreguntas
+MainSwing ..> ObservadorMaquina
+MainSwing ..> ResultadoPregunta
+MainSwing ..> SimuladorMaquinaVsMaquina
+MainSwing ..> RecordDAO
+MainSwing ..> RecordArchivoDAO
+
+ConsolaJuego ..> Filtro
+ConsolaJuego ..> Personaje
+ConsolaJuego ..> ResultadoPregunta
+InterfazSwing *-- VentanaJuego
+InterfazSwing ..> Filtro
+InterfazSwing ..> Personaje
+VentanaJuego ..> JTextArea
+VentanaJuego ..> JPanel
+VentanaJuego ..> JComponent
+
+Jugador *-- Personaje : personajeSecreto
+Jugador ..> Filtro
+JugadorHumano *-- InterfazHumano
+JugadorHumano ..> CatalogoFiltros
+JugadorHumano ..> RepositorioPersonajes
+JugadorMaquina *-- Estrategia
+JugadorMaquina o-- Personaje : candidatos
+JugadorMaquina o-- Filtro : filtrosUsados
+JugadorMaquina ..> CatalogoFiltros
+
+InterfazHumano ..> Filtro
+InterfazHumano ..> Personaje
+
+Estrategia ..> Personaje
+Estrategia ..> Filtro
+EstrategiaAsertiva ..> Personaje
+EstrategiaAsertiva ..> Filtro
+EstrategiaConservadora ..> Personaje
+EstrategiaConservadora ..> Filtro
+EstrategiaConservadora o-- Filtro : guion
+BancoDeSimulaciones ..> Reporte
+BancoDeSimulaciones ..> Estrategia
+BancoDeSimulaciones ..> EstrategiaAsertiva
+BancoDeSimulaciones ..> EstrategiaConservadora
+BancoDeSimulaciones ..> CatalogoFiltros
+BancoDeSimulaciones ..> RepositorioPersonajes
+BancoDeSimulaciones ..> Personaje
+BancoDeSimulaciones ..> Filtro
+
+Filtro ..> Personaje
+FiltroGenero --> Genero
+FiltroGenero ..> Personaje
+FiltroColorPelo --> ColorPelo
+FiltroColorPelo ..> Personaje
+FiltroBarba ..> Personaje
+FiltroCalvicie ..> Personaje
+FiltroLentes ..> Personaje
+CatalogoFiltros o-- Filtro
+CatalogoFiltros ..> Genero
+CatalogoFiltros ..> ColorPelo
+CatalogoFiltros ..> FiltroGenero
+CatalogoFiltros ..> FiltroColorPelo
+CatalogoFiltros ..> FiltroBarba
+CatalogoFiltros ..> FiltroCalvicie
+CatalogoFiltros ..> FiltroLentes
+
+Partida *-- Jugador
+Partida *-- HistorialPreguntas
+Partida --> EstadoPartida
+Partida --> ResultadoPregunta
+Partida ..> Pregunta
+Partida ..> Filtro
+Partida ..> Personaje
+Pregunta *-- Filtro
+ResultadoPregunta *-- Pregunta
+HistorialPreguntas o-- ResultadoPregunta
+HistorialPreguntas o-- ObservadorPreguntas
+ObservadorPreguntas ..> Pregunta
+ObservadorPreguntas ..> ResultadoPregunta
+ObservadorMaquina *-- JugadorMaquina
+ObservadorMaquina ..> Pregunta
+ObservadorMaquina ..> ResultadoPregunta
+SimuladorMaquinaVsMaquina *-- Estrategia
+SimuladorMaquinaVsMaquina ..> JugadorMaquina
+SimuladorMaquinaVsMaquina ..> Partida
+SimuladorMaquinaVsMaquina ..> EstadoPartida
+SimuladorMaquinaVsMaquina ..> ResultadoPregunta
+SimuladorMaquinaVsMaquina ..> Filtro
+SimuladorMaquinaVsMaquina ..> Personaje
+
+RecordArchivoDAO o-- RecordJugador
+RecordArchivoDAO ..> OrdenadorMergeSort
+RecordDAO ..> RecordJugador
+
+RepositorioPersonajes *-- Personaje
+RepositorioPersonajes ..> FabricaPersonajes
+RepositorioPersonajes ..> OrdenadorMergeSort
+RepositorioPersonajes ..> BuscadorBinario
+RepositorioPersonajes ..> Predicate
+FabricaPersonajes ..> Personaje
+FabricaPersonajes ..> Genero
+FabricaPersonajes ..> ColorPelo
+FabricaPersonajes ..> Faker
+BuscadorBinario ..> Personaje
+OrdenadorMergeSort ..> Comparator
+
+@enduml
