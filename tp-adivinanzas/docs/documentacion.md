@@ -360,3 +360,51 @@ Para lograrlo se reutilizan los mismos objetos `humano` y `maquina2` al crear la
 El nuevo flujo se aplicó tanto a la versión por consola (`Main`) como a la interfaz gráfica (`MainSwing`) para mantener el mismo comportamiento en ambas formas de ejecución.
 
 También se corrigió el momento en el que se registra una victoria. Inicialmente se guardaba al vencer a M1; luego del cambio, la victoria se registra únicamente después de vencer a M1 y M2.
+
+# Documentacion B7
+El objetivo de este bloque es proporcionar un mecanismo de persistencia para almacenar y listar el historial acumulado de victorias de los jugadores.
+
+RecordDAO(Interfaz): define el contrato para gestionar los records(cargar, guardar, mostrar, registrarVictorio y listarOrdenado)
+
+RecordJugador: encapsula los datos de un registro en el marcador(nombre y partidasGanadas). Solo expone getters y un metodo toString() formateado para la presentacion
+
+RecordArchivoDAO: lee y escribe en un archivo CSV
+
+Cargar en memoria(cargar): utiliza BufferedReader y FileReader. Antes de procesar, verifica la existencia del archivo mediante FileExists().
+Si el archivo no existe, la aplicacion continua en un estado valido con un marcador vacio. Cada linea se parsea descartando espacios, lineas en blanco o entradas incompletas. Las lineas corruptas se capturan con un bloque try-catch sobre NumberFormatException y se ignoran silenciosamente sin interrumpir la carga del resto de los registros.
+
+Guardar(guardar): Utiliza FileWriter y PrintWriter. Antes de escribir, invoca archivo.getParentFile().mkdirs() para asegurar la creacion automatica del directorio datos/ si no existe.
+
+Registro de victoria(registrarVictoria): incrementa en 1 las victorias del jugador en la estructura de memoria utilizando records.getOrDefault(nombre, 0) + 1
+
+Estructura de datos utilizada:
+Map<String, Integer> records: un HashMap utilizado para almacenar la relacion nombre de jugador -> cantidad de victorias
+
+List<RecordJugador> lista dinamica temporal construida al invocar listarOrdenado() que luego es procesada por OrdenadorMergeSort
+
+# Complejidad de B7
+Consulta y registro individual: O(1) debido al acceso por clave en el HashMap
+Carga y Guardado en disco: O(n) donde n es la cantidad de registros unicos almacenados en el archivo
+Listado ordenado (listarOrdenado): O(n log n) impulsado por la complejidad temporal de MergeSort.
+
+
+# Documentacion de B8
+El bloque B8 proporciona un modo espectador en el que las dos maquinas compiten entre si. Su proposito principal es hacer visible el proceso de razonamiento de ambas maquinas, mostrando turno a turno como se reduce el espacio de busqueda
+
+Es implementada con resursividad:
+Casos base:
+        1. Finalizacion de la partida: partida.getEstado() == EstadoPartida.FINALIZADA. Ocurre cuando una de las maquinas adivina correctamente el personaje rival. Imprime el ganador y el total de turnos jugados.
+        2. Cota superior: numeroTurno > LIMITE_TURNOS(fijado en 60). Funciona como seguridad para evitar StackOverFlow
+
+Paso recursivo(simularTurnoRecursivo): identifica al atacante y defensor del turno actual, procesa la jugada correspondiente y se autoinvoca pasando el estado actualizado y el contador de turnos incrementado
+
+Estructuras utilizadas:
+        1. List<Personaje> candidatos: lista dinamica obtenida en atacante.getCandidatos() que representa los personajes disponibles para esa maquina
+        2. List<Filtro> disponibles: copia dinamica creada en cada turno a partir de CatalogoFiltros.listarTodos() a la cual se le remueven los filtros de maquina.getFiltrosUsados()
+
+# Complejidad de B8
+Por turno: O(fn) donde f es la cantidad de filtros disponibles y n los candidatos actuales. En cada turno se recorren los candidatos probando los filtros para ver si corresponde o no
+
+Recursividad: O(log n) al acortar los candidatos en cada turno la pila recusiva no crece mucho; aunque usamos un limite de turnos para garantizar que la memoria no crezca infinitamente
+
+Entonces en resumen la complejidad es O(fn) en el peor caso, ya que la cantidad de candidatos a evaluar cae exponencialmente turno a turno
