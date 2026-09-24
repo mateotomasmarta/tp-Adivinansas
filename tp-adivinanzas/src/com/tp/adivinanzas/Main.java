@@ -83,12 +83,15 @@ public class Main {
     }
 
     /**
-     * Humano contra Maquina 1. Maquina 2 juega en paralelo contra el mismo
-     * humano y, via Observer, escucha las preguntas de Maquina 1 para arrancar
-     * con ventaja informativa.
+     * El humano juega primero contra Maquina 1.
+     * Mientras se desarrolla esa partida, Maquina 2 observa las preguntas y
+     * respuestas
+     * obtenidas por Maquina 1.
+     * Si el humano vence a Maquina 1, juega una segunda partida contra Maquina 2,
+     * que conserva el conocimiento adquirido previamente.
      */
     private static void jugarHumanoVsMaquinas(String nombreJugador, ConsolaJuego consola,
-                                              List<Personaje> personajes, RecordDAO recordDAO) {
+            List<Personaje> personajes, RecordDAO recordDAO) {
         System.out.println();
         System.out.println("Elegi tu personaje secreto. No lo vas a poder cambiar durante la partida.");
         Personaje secretoHumano = consola.elegirPersonaje(nombreJugador, personajes);
@@ -103,9 +106,9 @@ public class Main {
         JugadorMaquina maquina1 = new JugadorMaquina("Maquina 1", secretos.get(0), estrategiaM1, personajes);
         JugadorMaquina maquina2 = new JugadorMaquina("Maquina 2", secretos.get(1), estrategiaM2, personajes);
 
-        // OBSERVER: Maquina 2 se suscribe a las preguntas que Maquina 1 le hace
-        // al humano. Como ambas persiguen el mismo secreto, cada respuesta que
-        // escucha le reduce candidatos sin gastar turnos propios.
+        // OBSERVER: Maquina 2 recibe las preguntas y respuestas que Maquina 1
+        // obtiene del humano. De esta forma adquiere conocimiento antes de
+        // enfrentarse al jugador.
         HistorialPreguntas historial = new HistorialPreguntas();
         historial.agregarObservador(new ObservadorMaquina(maquina2, "Maquina 1", nombreJugador));
 
@@ -128,20 +131,54 @@ public class Main {
         System.out.println();
         System.out.println("Gano: " + partida.getGanador().getNombre()
                 + " en " + partida.getTurnosJugados() + " turnos.");
+
         System.out.println("Candidatos que le quedaban a Maquina 2 escuchando: "
                 + maquina2.getCandidatos().size());
 
-        if (partida.getGanador() == humano) {
-            recordDAO.registrarVictoria(nombreJugador);
-            System.out.println("Victoria registrada en el marcador.");
-        } else {
+        if (partida.getGanador() != humano) {
             System.out.println("El personaje de Maquina 1 era: "
                     + maquina1.getPersonajeSecreto().getNombre());
+            return;
+        }
+
+        System.out.println();
+        System.out.println("Venciste a Maquina 1.");
+        System.out.println("Ahora te enfrentas a Maquina 2.");
+        System.out.println("Maquina 2 conserva la informacion aprendida de Maquina 1.");
+
+        Partida partida2 = new Partida(humano, maquina2);
+
+        System.out.println();
+        System.out.println("Empieza la segunda partida.");
+        System.out.println("Tu objetivo: adivinar el personaje de Maquina 2.");
+
+        while (partida2.getEstado() == EstadoPartida.EN_CURSO) {
+            Jugador actual = partida2.getJugadorActual();
+
+            if (actual == humano) {
+                turnoHumano(partida2, humano, consola, personajes);
+            } else {
+                turnoMaquina(partida2, maquina2, estrategiaM2);
+            }
+        }
+
+        System.out.println();
+        System.out.println("Gano: " + partida2.getGanador().getNombre()
+                + " en " + partida2.getTurnosJugados() + " turnos.");
+
+        if (partida2.getGanador() == humano) {
+            recordDAO.registrarVictoria(nombreJugador);
+
+            System.out.println("Venciste a las dos maquinas.");
+            System.out.println("Victoria registrada en el marcador.");
+        } else {
+            System.out.println("El personaje de Maquina 2 era: "
+                    + maquina2.getPersonajeSecreto().getNombre());
         }
     }
 
     private static void turnoHumano(Partida partida, JugadorHumano humano, ConsolaJuego consola,
-                                    List<Personaje> personajes) {
+            List<Personaje> personajes) {
         System.out.println();
         System.out.println("--- Tu turno ---");
         System.out.println("1. Hacer una pregunta");

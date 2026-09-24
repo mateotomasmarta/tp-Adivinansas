@@ -85,25 +85,278 @@ Ninguna de las dos subclases hace su trabajo sola: ambas delegan la decision en 
 
 `Estrategia` e `InterfazHumano` las definimos en el bloque de jugadores en lugar de en los bloques que las implementan, porque son `JugadorMaquina` y `JugadorHumano` -los modulos de alto nivel- quienes fijan la abstraccion que necesitan (Dependency Inversion): no dependen de las implementaciones concretas, solo de estos contratos.
 
-## B5 - Observer entre Maquina 1 y Maquina 2
+## B5 - Observer entre Máquina 1 y Máquina 2
 
-El problema de este bloque es permitir que Maquina 2 conozca las preguntas de Maquina 1 sin que Maquina 1 tenga que comunicarse directamente con ella. Para resolverlo se utiliza Observer.
+### Objetivo
 
-`HistorialPreguntas` publica los resultados y mantiene todas las preguntas en orden. Cada `ResultadoPregunta` contiene la pregunta, el filtro utilizado y la respuesta afirmativa o negativa. El personaje secreto nunca se incluye en la informacion compartida.
+El objetivo de este bloque es permitir que Máquina 2 obtenga información de las preguntas realizadas por Máquina 1 durante el primer enfrentamiento contra el jugador, sin acceder directamente al personaje secreto.
 
-`ObservadorMaquina` es el observador concreto de Maquina 2. Antes de notificar, el historial consulta si la pregunta fue realizada por Maquina 1 y si esta dirigida al rival que ambas maquinas intentan adivinar. Por eso una pregunta del humano o de la propia Maquina 2 no genera una notificacion para M2.
+Para resolverlo se utilizó el patrón **Observer**. De esta forma, M1 puede jugar normalmente mientras M2 recibe únicamente la información pública que se genera durante la partida: el filtro utilizado y la respuesta obtenida.
 
-Cuando recibe una pregunta valida, Maquina 2 actualiza sus candidatos y guarda el filtro entre las preguntas conocidas. Como `elegirPregunta()` excluye esos filtros, no puede repetir una pregunta que ya aprendio mediante Observer. El historial y los observadores se almacenan en listas; antes de agregar un observador se comprueba que no este repetido.
+### Funcionamiento
+
+Las clases principales de este bloque son:
+
+- `Pregunta`: representa una pregunta realizada durante un turno.
+- `ResultadoPregunta`: contiene una pregunta junto con su respuesta.
+- `ObservadorPreguntas`: interfaz que define el comportamiento de los observadores.
+- `HistorialPreguntas`: almacena los resultados y notifica a los observadores.
+- `ObservadorMaquina`: observador concreto utilizado por M2.
+
+Cuando M1 realiza una pregunta, `Partida` obtiene la respuesta del jugador y crea un `ResultadoPregunta`. Luego, el resultado se registra en `HistorialPreguntas`.
+
+El historial recorre los observadores registrados y, mediante `debeObservar()`, determina cuáles deben recibir esa información. En el caso de M2, `ObservadorMaquina` verifica que la pregunta haya sido realizada por M1 y esté dirigida al jugador humano.
+
+Si se cumplen estas condiciones, M2 incorpora el conocimiento mediante:
+
+```java
+maquina.incorporarConocimiento(
+        resultado.getPregunta().getFiltro(),
+        resultado.isRespuestaAfirmativa());
+```
+
+A partir del filtro y la respuesta, M2 descarta de su lista los personajes que ya no pueden ser el personaje secreto del jugador. También guarda ese filtro como conocido para no repetir posteriormente una pregunta cuya respuesta ya obtuvo observando a M1.
+
+De esta manera, M2 obtiene una ventaja para el segundo enfrentamiento sin conocer directamente el personaje secreto.
+
+### Persistencia del conocimiento
+
+M2 se crea antes de comenzar la partida contra M1 y queda registrada como observadora del historial:
+
+```java
+HistorialPreguntas historial = new HistorialPreguntas();
+historial.agregarObservador(
+        new ObservadorMaquina(maquina2, "Maquina 1", nombreJugador));
+```
+
+Si el jugador vence a M1, se inicia una nueva partida reutilizando el mismo objeto `maquina2`:
+
+```java
+Partida partida2 = new Partida(humano, maquina2);
+```
+
+Al reutilizar la misma instancia, M2 conserva los candidatos descartados y los filtros que aprendió durante la primera partida.
+
+### Justificación del patrón Observer
+
+Se eligió Observer para evitar una dependencia directa entre M1 y M2.
+
+M1 no necesita conocer a M2 ni ejecutar métodos sobre ella. Su única responsabilidad es jugar su propia partida. `HistorialPreguntas` funciona como intermediario y notifica a los objetos interesados cuando se registra una nueva respuesta.
+
+Esto reduce el acoplamiento entre las clases y permite que en el futuro puedan agregarse otros observadores sin modificar la lógica de M1.
+
+### Estructuras de datos utilizadas
+
+`HistorialPreguntas` utiliza listas para almacenar los resultados de las preguntas y los observadores registrados.
+
+Por su parte, `JugadorMaquina` mantiene una lista de candidatos y una lista de filtros usados o conocidos. Estas listas se modifican durante la partida a medida que la máquina obtiene nueva información.
+
+### Complejidad de B5
+
+La operación principal del bloque es la incorporación de conocimiento en M2.
+
+Si `n` representa la cantidad de candidatos, `actualizarCandidatos()` debe recorrer esa lista para conservar únicamente los personajes compatibles con la respuesta obtenida. Por lo tanto, su complejidad es:
+
+`O(n)`
+
+La notificación de observadores tiene complejidad `O(o)`, donde `o` representa la cantidad de observadores registrados. En la implementación actual existe un único observador para M2, por lo que este costo es constante en la práctica.
 
 ## B6 - Motor de partida
 
-`Partida` coordina un encuentro entre dos jugadores, que puede ser Humano vs Maquina o Maquina vs Maquina. Guarda los participantes, el jugador que tiene el turno, la cantidad de turnos, el estado y el ganador.
+### Objetivo
 
-La API representa directamente las dos acciones de la consigna:
+El objetivo de este bloque es coordinar una partida entre exactamente dos jugadores.
 
-- `realizarPregunta(Filtro)`: consulta `responder()` en el rival, actualiza los candidatos de la maquina que pregunto, registra el resultado y cambia el turno.
-- `realizarAdivinanza(Personaje)`: consulta `responderAdivinanza()` en el rival. Si falla, la maquina descarta ese candidato y cambia el turno. Si acierta, la partida termina y guarda al ganador.
+La clase `Partida` controla los turnos, procesa preguntas y adivinanzas, registra las preguntas realizadas y determina cuándo termina el enfrentamiento.
 
-`EstadoPartida` distingue entre `EN_CURSO` y `FINALIZADA`. Una vez finalizada, no se permiten nuevas preguntas ni adivinanzas. No existe un limite de preguntas impuesto por el motor.
+El motor no decide qué estrategia utiliza cada máquina, no crea personajes, no maneja la interfaz y no guarda récords. Estas responsabilidades quedan separadas en otras partes del proyecto.
 
-El motor no elige estrategias, no crea filtros ni personajes, no ordena datos, no imprime por consola y no persiste records. Su unica responsabilidad es coordinar el flujo de la partida. Las decisiones quedan a cargo de los jugadores y sus estrategias; la consola y el simulador utilizan los metodos publicos del motor.
+### Funcionamiento
+
+`Partida` mantiene los siguientes datos principales:
+
+- los dos jugadores;
+- el jugador que posee el turno actual;
+- la cantidad de turnos jugados;
+- el estado de la partida;
+- el ganador;
+- el historial de preguntas.
+
+El estado se representa con `EstadoPartida`, que puede ser `EN_CURSO` o `FINALIZADA`.
+
+Las dos acciones principales del motor son `realizarPregunta()` y `realizarAdivinanza()`.
+
+### Realizar una pregunta
+
+El método:
+
+```java
+realizarPregunta(Filtro filtro)
+```
+
+obtiene al jugador actual y a su rival. Luego consulta la respuesta mediante:
+
+```java
+destinatario.responder(filtro);
+```
+
+De esta forma, quien pregunta recibe solamente una respuesta booleana y no necesita acceder directamente al personaje secreto del rival.
+
+Si el jugador que realizó la pregunta es una máquina, se actualiza su lista de candidatos utilizando el filtro y la respuesta obtenida.
+
+Después se crea una `Pregunta`, se genera su `ResultadoPregunta` y se registra en `HistorialPreguntas`. Finalmente se incrementa la cantidad de turnos y se cambia al siguiente jugador.
+
+### Realizar una adivinanza
+
+El método:
+
+```java
+realizarAdivinanza(Personaje candidato)
+```
+
+permite intentar adivinar directamente el personaje del rival.
+
+La comprobación se realiza mediante:
+
+```java
+destinatario.responderAdivinanza(candidato);
+```
+
+Si la respuesta es correcta, el jugador actual queda registrado como ganador y el estado de la partida cambia a `FINALIZADA`.
+
+Si la respuesta es incorrecta, la partida continúa. Cuando quien falló es una máquina, el personaje incorrecto se elimina de su lista de candidatos antes de cambiar el turno.
+
+### Manejo de turnos
+
+Como una partida siempre tiene exactamente dos participantes, se utiliza un arreglo:
+
+```java
+Jugador[] jugadores;
+```
+
+y un índice que indica qué jugador posee el turno.
+
+El cambio se realiza con:
+
+```java
+indiceTurno = 1 - indiceTurno;
+```
+
+Como los únicos valores posibles son `0` y `1`, esta operación alterna directamente entre ambos jugadores.
+
+El rival del jugador actual se obtiene de forma similar:
+
+```java
+jugadores[1 - indiceTurno]
+```
+
+### Estado y validaciones
+
+Antes de realizar una pregunta o una adivinanza se verifica que la partida continúe en estado `EN_CURSO`. Una vez que existe un ganador, no se permiten nuevas acciones.
+
+También se validan los datos necesarios para construir y utilizar una partida, por ejemplo:
+
+- ambos jugadores deben existir;
+- deben ser jugadores diferentes;
+- deben tener nombres diferentes;
+- el historial no puede ser `null`;
+- el filtro o personaje recibido por los métodos no puede ser `null`.
+
+Estas validaciones evitan que el motor quede en estados inconsistentes.
+
+### Flujo entre M1 y M2
+
+El enfrentamiento contra M1 y el enfrentamiento contra M2 se representan como dos objetos `Partida` distintos, ya que cada partida contiene solamente dos jugadores.
+
+Primero se crea la partida entre el humano y M1. Si el jugador pierde, el flujo termina.
+
+Si el jugador vence a M1, se crea una segunda partida:
+
+```java
+Partida partida2 = new Partida(humano, maquina2);
+```
+
+Se reutiliza el mismo objeto `humano`, por lo que mantiene el mismo personaje secreto, y también se reutiliza el mismo objeto `maquina2`, que conserva el conocimiento adquirido mientras observaba a M1.
+
+El récord se registra solamente si el jugador logra vencer a las dos máquinas.
+
+### Estructuras de datos utilizadas
+
+La estructura principal propia de `Partida` es el arreglo de jugadores:
+
+```java
+Jugador[] jugadores;
+```
+
+Se utilizó un arreglo porque la cantidad de participantes es fija y siempre vale dos. No es necesario utilizar una estructura dinámica para una cantidad que no cambia durante la partida.
+
+Además, `Partida` mantiene una referencia a `HistorialPreguntas`, utilizado para registrar las preguntas y permitir las notificaciones del Observer.
+
+### Complejidad de B6
+
+Las operaciones relacionadas con el manejo de turnos son constantes:
+
+- obtener al jugador actual: `O(1)`;
+- obtener al rival: `O(1)`;
+- cambiar el turno: `O(1)`.
+
+En `realizarPregunta()`, cuando quien pregunta es una máquina, debe actualizar su lista de candidatos. Si `n` es la cantidad de candidatos, esta operación tiene complejidad `O(n)`.
+
+En `realizarAdivinanza()`, comprobar si el personaje es correcto es `O(1)`. Sin embargo, si una máquina falla debe eliminar al personaje de un `ArrayList`, lo que en el peor caso puede tener costo `O(n)`.
+
+Por lo tanto, considerando las operaciones que modifican la lista de candidatos, el peor caso de las acciones principales del motor es:
+
+`O(n)`
+
+## Bitácora de P4 - B5 y B6
+
+La parte P4 del trabajo se centró en dos responsabilidades: implementar el motor que coordina una partida y resolver la comunicación de información entre M1 y M2 mediante Observer.
+
+### Primera etapa - Diseño del motor
+
+En una primera versión se evaluó representar las posibles acciones de un turno mediante varias clases específicas para preguntas, adivinanzas y resultados.
+
+Al avanzar con la implementación se observó que este diseño agregaba más clases y complejidad de la necesaria para las dos acciones reales del juego.
+
+Por este motivo se simplificó el motor y se dejaron como operaciones principales de `Partida`:
+
+```java
+realizarPregunta(Filtro filtro)
+realizarAdivinanza(Personaje candidato)
+```
+
+Con esta modificación, `Partida` quedó encargada solamente de coordinar jugadores, turnos, preguntas, adivinanzas y el estado del enfrentamiento.
+
+### Segunda etapa - Implementación de Observer
+
+El siguiente problema fue implementar la ventaja de M2.
+
+La máquina debía conocer las preguntas y respuestas obtenidas previamente por M1, pero sin acceder directamente al personaje secreto del jugador.
+
+Para resolverlo se implementó `HistorialPreguntas` como sujeto del patrón Observer y `ObservadorMaquina` como observador concreto de M2.
+
+Cada vez que M1 realiza una pregunta al jugador, el resultado queda registrado en el historial. Si la pregunta corresponde a M1 y está dirigida al jugador humano, M2 recibe el filtro junto con la respuesta y actualiza su conocimiento.
+
+Esto permitió cumplir la ventaja informativa de M2 sin generar una comunicación directa entre las dos máquinas.
+
+### Tercera etapa - Ajuste del flujo M1 a M2
+
+Después de una aclaración del profesor se corrigió la interpretación del modo Jugador vs Máquina.
+
+Se definió que una `Partida` siempre representa un enfrentamiento entre dos jugadores. Por lo tanto, el jugador primero se enfrenta a M1 y solamente si la vence comienza una segunda partida contra M2.
+
+El flujo implementado quedó:
+
+1. Jugador vs M1.
+2. Durante esa partida M2 observa las preguntas y respuestas obtenidas por M1.
+3. Si el jugador pierde contra M1, termina el juego.
+4. Si vence a M1, comienza automáticamente una nueva partida contra M2.
+5. El jugador mantiene el mismo personaje secreto.
+6. M2 mantiene el conocimiento adquirido durante la primera partida.
+7. El récord se registra únicamente si el jugador vence también a M2.
+
+Para lograrlo se reutilizan los mismos objetos `humano` y `maquina2` al crear la segunda partida.
+
+El nuevo flujo se aplicó tanto a la versión por consola (`Main`) como a la interfaz gráfica (`MainSwing`) para mantener el mismo comportamiento en ambas formas de ejecución.
+
+También se corrigió el momento en el que se registra una victoria. Inicialmente se guardaba al vencer a M1; luego del cambio, la victoria se registra únicamente después de vencer a M1 y M2.
