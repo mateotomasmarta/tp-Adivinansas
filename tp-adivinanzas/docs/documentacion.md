@@ -61,15 +61,19 @@ La precondicion critica es que la lista debe estar ordenada por ID. Si alguien r
 
 `FiltroBarba` no estaba en el set inicial de archivos, pero es necesaria: en B0 se agrego `barba` como quinto atributo del `Personaje` especificamente para que los 23 personajes sean distinguibles entre si. Si nunca se pudiera preguntar por barba, dos personajes identicos en genero, calvicie, lentes y color de pelo pero distintos en barba serian indistinguibles para la maquina, y la garantia de unicidad de B0 no serviria para nada en el juego real.
 
-Los filtros se componen sin tocar las clases concretas, via los metodos default de la interfaz:
+`CatalogoFiltros` enumera todas las preguntas de si/no posibles: un filtro por cada atributo booleano (preguntar por el negativo no aporta informacion nueva) y un `FiltroColorPelo` por cada color real (`COLORADO`, `NEGRO`, `AMARILLO`). No incluye un filtro para `NINGUNO` porque ese valor ya queda determinado por la respuesta de `FiltroCalvicie`. En total expone 7 filtros.
 
-- `y(Filtro otro)`: AND logico entre dos filtros.
-- `o(Filtro otro)`: OR logico.
-- `negar()`: NOT logico.
+Los filtros se crean una sola vez y se guardan en una lista estatica. Esto no es solo para no crear objetos nuevos en cada turno: tambien es necesario para que la maquina no repita preguntas. Los filtros no tienen `equals`, entonces cuando `JugadorMaquina` usa `removeAll` o `contains` sobre sus `filtrosUsados`, los compara por referencia. Como el catalogo siempre devuelve los mismos objetos, la comparacion funciona. Por eso los filtros del juego siempre se tienen que sacar de `CatalogoFiltros` y no crear con `new` en otro lado.
 
-Cada composicion devuelve una implementacion anonima de `Filtro` que delega `cumple` en los filtros originales y arma una descripcion combinada. Esto es Open/Closed: se pueden expresar preguntas compuestas ("es mujer y usa lentes") sin modificar `FiltroGenero` ni `FiltroLentes`.
+### Estructuras de datos de B2
 
-`CatalogoFiltros` enumera todas las preguntas de si/no posibles: un filtro por cada atributo booleano (preguntar por el negativo no aporta informacion nueva) y un `FiltroColorPelo` por cada color real (`COLORADO`, `NEGRO`, `AMARILLO`). No incluye un filtro para `NINGUNO` porque ese valor ya queda determinado por la respuesta de `FiltroCalvicie`. En total expone 7 filtros, cacheados en una lista estatica para no recrear instancias en cada turno.
+- `List<Filtro>` en `CatalogoFiltros`: guarda los 7 filtros. Es una lista que no se puede modificar (`Collections.unmodifiableList`), asi nadie puede agregar o sacar filtros desde afuera por error.
+
+### Complejidad de B2
+
+- `cumple()`: `O(1)`, porque solo compara un atributo del personaje.
+- Aplicar un filtro a `n` candidatos: `O(n)`, porque hay que revisar cada personaje una vez.
+- `listarTodos()`: `O(1)`, porque devuelve la lista que ya estaba creada.
 
 ## B3 - Jugadores (Template Method)
 
